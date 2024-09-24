@@ -39,7 +39,22 @@ func connectionDB() *mongo.Client {
 	return client
 }
 
+//CORS permissions function
+func setCORSHeaders(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
 func getAudioFilesHandler(w http.ResponseWriter, r *http.Request) {
+	//Set CORS permissions
+	if r.Method == http.MethodOptions {
+		setCORSHeaders(w, r)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	setCORSHeaders(w, r)
+	
 	// Establish connection to the collection
 	collection := client.Database("AudioDB").Collection("AudioFiles")
 
@@ -85,30 +100,6 @@ func getAudioFilesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "No audio files found", http.StatusNotFound)
 		return
 	}
-
-	/* non concurrent implimentation
-
-	// Initialize audioFiles array
-	var audioFiles []AudioFile
-
-	// Parse cursors returned data
-	for cursor.Next(context.TODO()) {
-		//Initialize single audio file struct
-		var audioFile AudioFile
-		if err := cursor.Decode(&audioFile); err != nil {
-			http.Error(w, "Error decoding audio file", http.StatusInternalServerError)
-			return
-		}
-		audioFiles = append(audioFiles, audioFile)
-	}
-
-	// Empty array aka no files found, 404 error response
-	if len(audioFiles) == 0 {
-		http.Error(w, "No audio files found", http.StatusNotFound)
-		return
-	}
-
-	*/
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(audioFiles)
